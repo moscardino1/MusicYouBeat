@@ -1,0 +1,20 @@
+CREATE --> A Predict YouTube views betting App to win tokens.
+Tech stack
+    Please mind that on a technology Point of view I WANT:
+        Backend in Flask (for DB logic Posgrees using POSTGRES_URL_NON_POOLING env details present in .env file). All the tables mut have MYB_* prefix. Create them directly if not present.  
+        CSS must leverage tailwind framework to be more efficient
+            Clean, intuitive interface with data visualizations to track predictions and performance.The color palette combines deep light blues with vibrant accent colors to create an engaging and modern look. Use clean typography, subtle animations for interactions, and a modern font to create a premium feel.
+            Screen attached 
+
+Concept: 
+    Bet your free daily tokens YBEAT on whether a YouTube video (UI Polymarket Like) will hit a target view count within a set time. Get 100 tokens to start and 10 more each day. Admins set the videos and view goals. Winners get more tokens!
+    It reminds me of prediction markets like Polymarket, but focused specifically on YouTube video performance. With a sleek and engaging interface for this game with a modern, vibrant design.
+
+Features: 
+    For this first version, implement the following:
+        A homepage with featured prediction markets
+        Individual prediction market pages
+        Token balance display
+        Betting interface
+        Basic leaderboard
+        Admin panel for creating new markets

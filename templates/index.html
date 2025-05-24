@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ViewBet - Predict YouTube Views and Win</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <nav class="bg-gray-900 border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <span class="text-purple-500 text-xl font-bold">ViewBet</span>
+                    </div>
+                    <div class="ml-6 flex space-x-8">
+                        <a href="{{ url_for('index') }}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Home</a>
+                        <a href="{{ url_for('leaderboard') }}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Leaderboard</a>
+                        {% if current_user.is_authenticated and current_user.is_admin %}
+                        <a href="{{ url_for('admin') }}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Admin</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('create_market_page') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Create Prediction</a>
+                    <a href="{{ url_for('daily_bonus') }}" class="text-purple-500 hover:text-purple-400 text-sm">Daily Bonus</a>
+                    <a href="{{ url_for('profile') }}" class="text-gray-300 hover:text-white text-sm">Profile</a>
+                    <span class="bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium">
+                        {{ current_user.tokens }} tokens
+                    </span>
+                    <a href="{{ url_for('logout') }}" class="text-gray-300 hover:text-white text-sm">Logout</a>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="text-purple-500 hover:text-purple-400 text-sm">Login</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="px-4 py-6 sm:px-0">
+            <div class="text-center mb-12">
+                <h1 class="text-4xl font-bold text-white mb-4">Predict YouTube Views, Win Tokens</h1>
+                <p class="text-gray-400 text-lg">Use your daily tokens to predict whether viral videos will hit their target view count before the deadline.</p>
+                <div class="mt-8 flex justify-center space-x-4">
+                    {% if current_user.is_authenticated %}
+                    <a href="#markets" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150">
+                        Place Bets
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150">
+                        Get Started
+                    </a>
+                    {% endif %}
+                    <a href="#how-it-works" class="border border-purple-600 text-purple-500 hover:text-purple-400 font-bold py-3 px-6 rounded-lg transition duration-150">
+                        How It Works
+                    </a>
+                </div>
+            </div>
+
+            <div id="markets" class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {% for market in markets %}
+                <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://img.youtube.com/vi/{{ market.youtube_url.split('v=')[1] }}/maxresdefault.jpg" 
+                             alt="{{ market.title }}" 
+                             class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-sm">
+                            ACTIVE
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold text-white mb-2">{{ market.title }}</h3>
+                        <div class="flex justify-between text-sm text-gray-400 mb-4">
+                            <span>Current: {{ "{:,}".format(market.current_views) }} views</span>
+                            <span>Target: {{ "{:,}".format(market.target_views) }} views</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2 mb-4">
+                            <div class="bg-purple-600 h-2 rounded-full" style="width: {{ (market.current_views / market.target_views * 100)|round|int }}%"></div>
+                        </div>
+                        <a href="{{ url_for('market', market_id=market.id) }}" 
+                           class="block w-full text-center bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded transition duration-150">
+                            Trade →
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </main>
+
+    <section id="how-it-works" class="bg-gray-900 py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-center text-white mb-12">How ViewBet Works</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="text-center">
+                    <div class="bg-purple-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-white text-xl font-bold">1</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">Get Daily Tokens</h3>
+                    <p class="text-gray-400">Start with 100 free tokens and get 10 more every day</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-purple-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-white text-xl font-bold">2</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">Make Predictions</h3>
+                    <p class="text-gray-400">Bet on whether videos will hit their view targets</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-purple-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-white text-xl font-bold">3</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-2">Win More Tokens</h3>
+                    <p class="text-gray-400">Correct predictions earn you additional tokens</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-gray-900 border-t border-gray-800 mt-12">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <p class="text-center text-gray-400 text-sm">
+                © 2023 ViewBet - Predict YouTube Views and Win
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

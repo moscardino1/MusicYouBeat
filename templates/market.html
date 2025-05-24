@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ market.title }} - ViewBet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <nav class="bg-gray-900 border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <a href="{{ url_for('index') }}" class="text-purple-500 text-xl font-bold">ViewBet</a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    {% if current_user.is_authenticated %}
+                    <span class="bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium">
+                        {{ current_user.tokens }} tokens
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div class="mb-4">
+            <a href="{{ url_for('index') }}" class="text-purple-500 hover:text-purple-400">← Back to all markets</a>
+        </div>
+        
+        <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+            <div class="relative">
+                <img src="https://img.youtube.com/vi/{{ market.youtube_url.split('v=')[1] }}/maxresdefault.jpg" 
+                     alt="{{ market.title }}" 
+                     class="w-full h-64 object-cover">
+                <a href="{{ market.youtube_url }}" target="_blank" class="absolute bottom-4 left-4 bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-red-700 transition duration-150">
+                    <span>Watch on YouTube</span>
+                </a>
+            </div>
+            
+            <div class="p-6">
+                <h1 class="text-2xl font-bold text-white mb-4">{{ market.title }}</h1>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div>
+                        <div class="bg-gray-700 rounded-lg p-4">
+                            <h3 class="text-sm font-medium text-gray-400 mb-1">Current Views</h3>
+                            <p class="text-2xl font-bold text-white">{{ "{:,}".format(market.current_views) }}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="bg-gray-700 rounded-lg p-4">
+                            <h3 class="text-sm font-medium text-gray-400 mb-1">Target Views</h3>
+                            <p class="text-2xl font-bold text-white">{{ "{:,}".format(market.target_views) }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <div class="flex justify-between text-sm text-gray-400 mb-2">
+                        <span>Progress</span>
+                        <span>{{ "%.1f"|format(market.current_views / market.target_views * 100) }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-4">
+                        <div class="bg-purple-600 h-4 rounded-full" style="width: {{ (market.current_views / market.target_views * 100)|round|int }}%"></div>
+                    </div>
+                </div>
+
+                {% if current_user.is_authenticated %}
+                <div class="bg-gray-900 rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-white mb-4">Place Your Bet</h2>
+                    <form action="{{ url_for('place_bet') }}" method="POST">
+                        <input type="hidden" name="market_id" value="{{ market.id }}">
+                        
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-400 mb-2">Your Prediction</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <label class="relative">
+                                    <input type="radio" name="prediction" value="yes" class="sr-only peer">
+                                    <div class="w-full text-center px-4 py-3 rounded-lg bg-gray-800 peer-checked:bg-green-600 peer-checked:text-white transition-colors cursor-pointer">
+                                        Yes
+                                    </div>
+                                </label>
+                                <label class="relative">
+                                    <input type="radio" name="prediction" value="no" class="sr-only peer">
+                                    <div class="w-full text-center px-4 py-3 rounded-lg bg-gray-800 peer-checked:bg-red-600 peer-checked:text-white transition-colors cursor-pointer">
+                                        No
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-400 mb-2">Bet Amount</label>
+                            <input type="number" name="amount" min="1" max="{{ current_user.tokens }}" value="10"
+                                   class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-600">
+                        </div>
+
+                        <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition duration-150">
+                            Place Bet
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <p class="text-gray-400 mb-4">You need to be logged in to place bets</p>
+                    <a href="{{ url_for('login') }}" class="inline-block bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition duration-150">
+                        Log In to Place Bets
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+</body>
+</html>
