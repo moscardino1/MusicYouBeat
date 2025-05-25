@@ -1,7 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 import os
 import json
@@ -9,6 +9,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from bs4 import BeautifulSoup
 import requests
 import re
+import sqlalchemy.exc
 
 load_dotenv()
 
@@ -16,6 +17,15 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('POSTGRES_URL_NON_POOLING')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.urandom(24)
+
+# Add SQLAlchemy connection pool settings
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,  # Maximum number of connections to keep
+    'pool_timeout': 30,  # Seconds to wait before giving up on getting a connection
+    'pool_recycle': 1800,  # Recycle connections after 30 minutes
+    'pool_pre_ping': True,  # Enable connection health checks
+    'max_overflow': 5  # Maximum number of connections that can be created beyond pool_size
+}
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -29,8 +39,11 @@ class MYB_User(UserMixin, db.Model):
     tokens = db.Column(db.Integer, default=100)
     is_admin = db.Column(db.Boolean, default=False)
     last_bonus = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # Add relationship with bets
     bets = db.relationship('MYB_Bet', backref='user', lazy=True)
+    bet_history = db.relationship('MYB_BetHistory', backref='user', lazy=True)
 
 class MYB_Market(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -40,9 +53,14 @@ class MYB_Market(db.Model):
     current_views = db.Column(db.Integer, default=0)
     deadline = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     status = db.Column(db.String(20), default='active')  # active, ended, cancelled
+    total_yes_bets = db.Column(db.Integer, default=0)
+    total_no_bets = db.Column(db.Integer, default=0)
+    total_volume = db.Column(db.Integer, default=0)
     # Add relationship with bets
     bets = db.relationship('MYB_Bet', backref='market', lazy=True)
+    bet_history = db.relationship('MYB_BetHistory', backref='market', lazy=True)
 
 class MYB_Bet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -51,10 +69,24 @@ class MYB_Bet(db.Model):
     prediction = db.Column(db.Boolean, nullable=False)  # True = Yes, False = No
     amount = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class MYB_BetHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('myb__user.id'), nullable=False)
+    market_id = db.Column(db.Integer, db.ForeignKey('myb__market.id'), nullable=False)
+    prediction = db.Column(db.Boolean, nullable=False)  # True = Yes, False = No
+    amount = db.Column(db.Integer, nullable=False)
+    outcome = db.Column(db.Boolean, nullable=False)  # True = Won, False = Lost
+    tokens_won = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 with app.app_context():
-    # Create tables if they don't exist
+    # Drop all tables and recreate them
+    # db.drop_all() # Uncomment this to drop all tables and recreate them
     db.create_all()
+    print("Database tables have been dropped and recreated.")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -77,16 +109,37 @@ def place_bet():
     prediction = request.form.get('prediction') == 'yes'
     amount = int(request.form.get('amount'))
     
+    market = MYB_Market.query.get_or_404(market_id)
+    
+    if market.status != 'active':
+        flash('This market is no longer accepting bets')
+        return redirect(url_for('market', market_id=market_id))
+    
     if current_user.tokens < amount:
         flash('Not enough tokens')
         return redirect(url_for('market', market_id=market_id))
         
     bet = MYB_Bet(user_id=current_user.id, market_id=market_id,
                   prediction=prediction, amount=amount)
+    
+    # Update market totals
+    if prediction:
+        market.total_yes_bets += amount
+    else:
+        market.total_no_bets += amount
+    market.total_volume = market.total_yes_bets + market.total_no_bets
+    
+    # Update user's tokens
     current_user.tokens -= amount
     
-    db.session.add(bet)
-    db.session.commit()
+    try:
+        db.session.add(bet)
+        db.session.commit()
+        flash('Bet placed successfully!')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error placing bet. Please try again.')
+        print(f"Error placing bet: {str(e)}")
     
     return redirect(url_for('market', market_id=market_id))
 
@@ -132,7 +185,10 @@ def create_market():
     youtube_url = request.form.get('youtube_url')
     title = request.form.get('title')
     target_views = int(request.form.get('target_views'))
+    
+    # Parse the datetime directly as UTC
     deadline = datetime.strptime(request.form.get('deadline'), '%Y-%m-%dT%H:%M')
+    deadline = deadline.replace(tzinfo=timezone.utc)
     
     # Get initial view count
     initial_views = get_youtube_views(youtube_url)
@@ -193,8 +249,13 @@ def profile():
         MYB_Market.status == 'active'
     ).all()
     
+    bet_history = MYB_BetHistory.query.filter_by(
+        user_id=current_user.id
+    ).order_by(MYB_BetHistory.created_at.desc()).all()
+    
     return render_template('profile.html', 
                          active_bets=active_bets,
+                         bet_history=bet_history,
                          timedelta=timedelta)
 
 # Global cache for view counts
@@ -266,12 +327,64 @@ def update_market_views():
             views = get_youtube_views(market.youtube_url)
             if views is not None:
                 market.current_views = views
+                market.updated_at = datetime.utcnow()
                 # Check if market should be ended
-                if views >= market.target_views:
+                if views >= market.target_views or market.deadline <= datetime.utcnow():
                     market.status = 'ended'
-                elif market.deadline <= datetime.utcnow():
-                    market.status = 'ended'
+                    # Process all bets for this market
+                    process_market_bets(market)
         db.session.commit()
+
+def process_market_bets(market):
+    # Calculate total volume and odds
+    total_yes = sum(bet.amount for bet in market.bets if bet.prediction)
+    total_no = sum(bet.amount for bet in market.bets if not bet.prediction)
+    total_volume = total_yes + total_no
+    
+    # Update market totals
+    market.total_yes_bets = total_yes
+    market.total_no_bets = total_no
+    market.total_volume = total_volume
+    
+    # Determine outcome (True if views >= target)
+    outcome = market.current_views >= market.target_views
+    
+    # Process each bet
+    for bet in market.bets:
+        # Calculate winnings
+        if bet.prediction == outcome:
+            # Winner gets proportional share of losing side's tokens
+            if bet.prediction:  # Yes bet
+                winning_pool = total_no
+                winning_share = (bet.amount / total_yes) if total_yes > 0 else 0
+            else:  # No bet
+                winning_pool = total_yes
+                winning_share = (bet.amount / total_no) if total_no > 0 else 0
+            
+            tokens_won = int(bet.amount + (winning_pool * winning_share))
+        else:
+            tokens_won = 0
+        
+        # Create bet history record
+        history = MYB_BetHistory(
+            user_id=bet.user_id,
+            market_id=market.id,
+            prediction=bet.prediction,
+            amount=bet.amount,
+            outcome=(bet.prediction == outcome),
+            tokens_won=tokens_won
+        )
+        
+        # Update user's tokens
+        user = MYB_User.query.get(bet.user_id)
+        if bet.prediction == outcome:
+            user.tokens += tokens_won
+        
+        db.session.add(history)
+    
+    # Delete the original bets
+    for bet in market.bets:
+        db.session.delete(bet)
 
 # Initialize scheduler
 scheduler = BackgroundScheduler()
@@ -285,6 +398,20 @@ def update_views():
         update_market_views()
         flash('View counts updated')
     return redirect(url_for('admin'))
+
+@app.errorhandler(sqlalchemy.exc.OperationalError)
+def handle_db_error(error):
+    """Handle database connection errors"""
+    db.session.rollback()  # Roll back any failed transaction
+    flash('Database connection error. Please try again.', 'error')
+    return redirect(url_for('index'))
+
+@app.errorhandler(sqlalchemy.exc.SQLAlchemyError)
+def handle_sqlalchemy_error(error):
+    """Handle other SQLAlchemy errors"""
+    db.session.rollback()  # Roll back any failed transaction
+    flash('A database error occurred. Please try again.', 'error')
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
