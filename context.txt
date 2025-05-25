@@ -18,3 +18,16 @@ Features:
         Betting interface
         Basic leaderboard
         Admin panel for creating new markets
+
+
+
+python3 App
+venv/bin/activate
+
+
+Missing:
+    I can't see my history of what I won and what I lost if the bet expired.
+    On the DB if you update records there must be an updated_at
+    The UI is missing ends at and odds Yes 60% No 40% in the market homepage
+    The ui betting close on, total betting volume, odds, betting history and 10,50,100, All --> bet token
+
