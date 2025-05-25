@@ -322,18 +322,44 @@ def get_youtube_views(url):
 
 def update_market_views():
     with app.app_context():
+        print("\n=== Starting market views update ===")
         active_markets = MYB_Market.query.filter_by(status='active').all()
+        print(f"Found {len(active_markets)} active markets")
+        
         for market in active_markets:
+            print(f"\nProcessing market {market.id} - {market.title}")
+            print(f"Current status: {market.status}")
+            print(f"Deadline: {market.deadline} UTC")
+            print(f"Current time: {datetime.utcnow()} UTC")
+            print(f"Time until deadline: {(market.deadline - datetime.utcnow()).total_seconds()} seconds")
+            
             views = get_youtube_views(market.youtube_url)
             if views is not None:
+                print(f"Updated views: {views} (target: {market.target_views})")
                 market.current_views = views
                 market.updated_at = datetime.utcnow()
+                
                 # Check if market should be ended
-                if views >= market.target_views or market.deadline <= datetime.utcnow():
+                if views >= market.target_views:
+                    print(f"Market {market.id} ended due to reaching target views")
                     market.status = 'ended'
-                    # Process all bets for this market
                     process_market_bets(market)
-        db.session.commit()
+                elif market.deadline <= datetime.utcnow():
+                    print(f"Market {market.id} ended due to deadline")
+                    market.status = 'ended'
+                    process_market_bets(market)
+                else:
+                    print(f"Market {market.id} still active")
+            else:
+                print(f"Failed to fetch views for market {market.id}")
+                
+        try:
+            db.session.commit()
+            print("\nSuccessfully committed all changes")
+        except Exception as e:
+            print(f"\nError committing changes: {str(e)}")
+            db.session.rollback()
+        print("=== Finished market views update ===\n")
 
 def process_market_bets(market):
     # Calculate total volume and odds
@@ -398,6 +424,32 @@ def update_views():
         update_market_views()
         flash('View counts updated')
     return redirect(url_for('admin'))
+
+@app.route('/debug/market/<int:market_id>')
+@login_required
+def debug_market(market_id):
+    if not current_user.is_admin:
+        return "Unauthorized", 403
+        
+    market = MYB_Market.query.get_or_404(market_id)
+    current_time = datetime.utcnow()
+    
+    debug_info = {
+        'market_id': market.id,
+        'title': market.title,
+        'status': market.status,
+        'deadline': market.deadline.strftime('%Y-%m-%d %H:%M:%S UTC'),
+        'current_time': current_time.strftime('%Y-%m-%d %H:%M:%S UTC'),
+        'time_diff': (market.deadline - current_time).total_seconds(),
+        'current_views': market.current_views,
+        'target_views': market.target_views,
+        'total_yes_bets': market.total_yes_bets,
+        'total_no_bets': market.total_no_bets,
+        'total_volume': market.total_volume,
+        'last_updated': market.updated_at.strftime('%Y-%m-%d %H:%M:%S UTC')
+    }
+    
+    return jsonify(debug_info)
 
 @app.errorhandler(sqlalchemy.exc.OperationalError)
 def handle_db_error(error):

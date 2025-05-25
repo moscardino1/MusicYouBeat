@@ -15,29 +15,7 @@
     </style>
 </head>
 <body>
-    <nav class="bg-gray-900 border-b border-gray-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex">
-                    <div class="flex-shrink-0 flex items-center">
-                        <a href="{{ url_for('index') }}" class="text-purple-500 text-xl font-bold">ViewBet</a>
-                    </div>
-                    <div class="ml-6 flex space-x-8">
-                        <a href="{{ url_for('index') }}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Home</a>
-                        <a href="{{ url_for('leaderboard') }}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Leaderboard</a>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <a href="{{ url_for('daily_bonus') }}" class="text-purple-500 hover:text-purple-400 text-sm">Daily Bonus</a>
-                    <a href="{{ url_for('profile') }}" class="text-gray-300 hover:text-white text-sm">Profile</a>
-                    <span class="bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium">
-                        {{ current_user.tokens }} tokens
-                    </span>
-                    <a href="{{ url_for('logout') }}" class="text-gray-300 hover:text-white text-sm">Logout</a>
-                </div>
-            </div>
-        </div>
-    </nav>
+    {% include 'components/header.html' %}
 
     <main class="max-w-3xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div class="mb-8">
@@ -101,12 +79,11 @@
 
         // Set minimum datetime to now in UTC
         const now = new Date();
-        const utcNow = new Date(now.getTime() );
-        const year = utcNow.getUTCFullYear();
-        const month = String(utcNow.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(utcNow.getUTCDate()).padStart(2, '0');
-        const hours = String(utcNow.getUTCHours()).padStart(2, '0');
-        const minutes = String(utcNow.getUTCMinutes()).padStart(2, '0');
+        const year = now.getUTCFullYear();
+        const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(now.getUTCDate()).padStart(2, '0');
+        const hours = String(now.getUTCHours()).padStart(2, '0');
+        const minutes = String(now.getUTCMinutes()).padStart(2, '0');
         const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
         document.querySelector('input[type="datetime-local"]').min = minDateTime;
     </script>

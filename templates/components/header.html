@@ -1,0 +1,75 @@
+<!-- Desktop navigation -->
+<nav class="bg-gray-900 border-b border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center">
+                <!-- Mobile menu button -->
+                <div class="sm:hidden mr-4">
+                    <button type="button" id="mobile-menu-button" class="text-gray-400 hover:text-white focus:outline-none">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex-shrink-0">
+                    <a href="{{ url_for('index') }}" class="text-purple-500 text-xl font-bold">ViewBet</a>
+                </div>
+                <div class="hidden sm:flex sm:ml-8 sm:space-x-4">
+                    <a href="{{ url_for('index') }}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Home</a>
+                    <a href="{{ url_for('leaderboard') }}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Leaderboard</a>
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                    <a href="{{ url_for('admin') }}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Admin</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                {% if current_user.is_authenticated %}
+                <div class="hidden sm:flex sm:items-center sm:space-x-4">
+                    <a href="{{ url_for('create_market_page') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Create Prediction</a>
+                    <a href="{{ url_for('daily_bonus') }}" class="text-purple-500 hover:text-purple-400 px-3 py-2 text-sm font-medium">Daily Bonus</a>
+                    <a href="{{ url_for('profile') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium">Profile</a>
+                </div>
+                <span class="bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium">
+                    {{ current_user.tokens }} tokens
+                </span>
+                <a href="{{ url_for('logout') }}" class="text-gray-300 hover:text-white text-sm">Logout</a>
+                {% else %}
+                <a href="{{ url_for('login') }}" class="text-purple-500 hover:text-purple-400 text-sm">Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Mobile menu -->
+<div id="mobile-menu" class="hidden sm:hidden absolute top-16 left-0 right-0 bg-gray-900 border-b border-gray-800 z-50">
+    <div class="px-2 pt-2 pb-3 space-y-1">
+        <a href="{{ url_for('index') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Home</a>
+        <a href="{{ url_for('leaderboard') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Leaderboard</a>
+        {% if current_user.is_authenticated and current_user.is_admin %}
+        <a href="{{ url_for('admin') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Admin</a>
+        {% endif %}
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('create_market_page') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Create Prediction</a>
+        <a href="{{ url_for('daily_bonus') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Daily Bonus</a>
+        <a href="{{ url_for('profile') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Profile</a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Mobile menu toggle
+    document.getElementById('mobile-menu-button').addEventListener('click', function() {
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenu.classList.toggle('hidden');
+    });
+
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', function(event) {
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        if (!mobileMenu.contains(event.target) && !mobileMenuButton.contains(event.target)) {
+            mobileMenu.classList.add('hidden');
+        }
+    });
+</script> 
