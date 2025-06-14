@@ -21,9 +21,13 @@ Features:
 
 
 source venv/bin/activate
-python3 App.py
 
-
+For testing:
+    MYB_TEST_MODE=1 pytest
+For running the app with test tables:
+    MYB_TEST_MODE=1 python app.py
+For normal use:
+    python app.py
 
 Missing Feature:
     Feature 

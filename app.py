@@ -32,7 +32,13 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+def get_table_name(base):
+    if os.getenv('MYB_TEST_MODE') == '1':
+        return f"test_{base}"
+    return base
+
 class MYB_User(UserMixin, db.Model):
+    __tablename__ = get_table_name('MYB_User')
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(120), nullable=False)
@@ -46,6 +52,7 @@ class MYB_User(UserMixin, db.Model):
     bet_history = db.relationship('MYB_BetHistory', backref='user', lazy=True)
 
 class MYB_Market(db.Model):
+    __tablename__ = get_table_name('MYB_Market')
     id = db.Column(db.Integer, primary_key=True)
     youtube_url = db.Column(db.String(200), nullable=False)
     title = db.Column(db.String(200), nullable=False)
@@ -63,18 +70,20 @@ class MYB_Market(db.Model):
     bet_history = db.relationship('MYB_BetHistory', backref='market', lazy=True)
 
 class MYB_Bet(db.Model):
+    __tablename__ = get_table_name('MYB_Bet')
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('myb__user.id'), nullable=False)
-    market_id = db.Column(db.Integer, db.ForeignKey('myb__market.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey(f'{get_table_name("MYB_User")}.id'), nullable=False)
+    market_id = db.Column(db.Integer, db.ForeignKey(f'{get_table_name("MYB_Market")}.id'), nullable=False)
     prediction = db.Column(db.Boolean, nullable=False)  # True = Yes, False = No
     amount = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class MYB_BetHistory(db.Model):
+    __tablename__ = get_table_name('MYB_BetHistory')
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('myb__user.id'), nullable=False)
-    market_id = db.Column(db.Integer, db.ForeignKey('myb__market.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey(f'{get_table_name("MYB_User")}.id'), nullable=False)
+    market_id = db.Column(db.Integer, db.ForeignKey(f'{get_table_name("MYB_Market")}.id'), nullable=False)
     prediction = db.Column(db.Boolean, nullable=False)  # True = Yes, False = No
     amount = db.Column(db.Integer, nullable=False)
     outcome = db.Column(db.Boolean, nullable=False)  # True = Won, False = Lost
