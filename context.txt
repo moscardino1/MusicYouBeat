@@ -26,4 +26,18 @@ python3 App.py
 
 
 Missing Feature:
-    
+    Feature 
+        Bank
+            To make it solvent you need to add the same amount of token everytime they bet on something
+                Bank tracking? How much do I add? what's the tracking reserve system?
+        Reward System: 
+            If I bet 100 as 50% I should get 100+50.
+
+         pytest -k test_place_bet
+    test suite
+        register new user --> (user_<sequence> and password same as user_<sequence>)
+        login new user --> (user_<sequence> and password same as user_<sequence>)
+        claim daily --> tokens I am expecting +100 to his balance
+        create market --> use always this video https://www.youtube.com/watch?v=XGtgSQDePig --> expiring in 30 seconds bet = + 1 view from current 
+        place a bet --> Bet = 50 on Win and check is in active bet  
+        win a bet / lose a bet --> Must check that won or loose in the profile 

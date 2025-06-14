@@ -86,7 +86,7 @@ with app.app_context():
     # Drop all tables and recreate them
     # db.drop_all() # Uncomment this to drop all tables and recreate them
     db.create_all()
-    print("Database tables have been dropped and recreated.")
+    print("DB Initialized")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -402,7 +402,7 @@ def process_market_bets(market):
         )
         
         # Update user's tokens
-        user = MYB_User.query.get(bet.user_id)
+        user = db.session.get(MYB_User, bet.user_id)
         if bet.prediction == outcome:
             user.tokens += tokens_won
         
